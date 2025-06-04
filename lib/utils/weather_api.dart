@@ -40,6 +40,7 @@ class WeatherAPI {
           visibility: responseParsed["visibility"].ddoubleValue / 1000,
           location: responseParsed["name"].stringValue,
           country: country,
+          countryCode: countryCode,
       );
 
       return GetWeatherObject(

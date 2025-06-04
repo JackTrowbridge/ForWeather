@@ -1,3 +1,8 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'current_weather.g.dart';
+
+@JsonSerializable()
 class CurrentWeather{
   final String weatherType;
   final int temperature;
@@ -7,6 +12,7 @@ class CurrentWeather{
   final double visibility;
   final String location;
   final String country;
+  final String countryCode;
 
   CurrentWeather({
     required this.weatherType,
@@ -17,6 +23,10 @@ class CurrentWeather{
     required this.visibility,
     required this.location,
     required this.country,
+    required this.countryCode,
   });
+
+  factory CurrentWeather.fromJson(Map<String, dynamic> json) => _$CurrentWeatherFromJson(json);
+  Map<String, dynamic> toJson() => _$CurrentWeatherToJson(this);
 
 }

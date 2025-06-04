@@ -2,17 +2,20 @@ import 'dart:ui';
 
 import 'package:algoliasearch/algoliasearch.dart';
 import 'package:easy_debounce/easy_debounce.dart';
-import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:forweather/api/api_key.dart';
 import 'package:forweather/dictionaries/colour_dictionary.dart';
+import 'package:forweather/models/current_weather.dart';
+import 'package:forweather/models/get_weather_object.dart';
 import 'package:forweather/models/location.dart';
+import 'package:forweather/providers/settings_provider.dart';
+import 'package:forweather/utils/storage_utils.dart';
+import 'package:forweather/utils/weather_api.dart';
 import 'package:forweather/utils/weather_converter.dart';
+import 'package:forweather/views/settings/settings_page.dart';
+import 'package:forweather/views/widgets/glass_container.dart';
 import 'package:intl/intl.dart';
-
-import '../../models/current_weather.dart';
-import '../../models/get_weather_object.dart';
-import '../../utils/weather_api.dart';
+import 'package:provider/provider.dart';
 
 class HomeWeather extends StatefulWidget {
   const HomeWeather({super.key});
@@ -42,6 +45,28 @@ class _HomeWeatherState extends State<HomeWeather> {
   String defaultErrorMessage = "We couldn't find the weather for this location. Please try again.";
   String errorMessage = "";
 
+  int currentTemperature = 0;
+  int currentFeelsLike = 0;
+
+  double celsiusToFahrenheit(int celsius) {
+    return (celsius * 9 / 5) + 32;
+  }
+
+  void _settingsChanged(){
+
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    setState(() {
+      if(settingsProvider.isCelsius) {
+        currentTemperature = currentWeather?.temperature.toInt() ?? 0;
+        currentFeelsLike = currentWeather?.feelsLike.toInt() ?? 0;
+      } else {
+        currentTemperature = celsiusToFahrenheit(currentWeather?.temperature.toInt() ?? 0).toInt();
+        currentFeelsLike = celsiusToFahrenheit(currentWeather?.feelsLike.toInt() ?? 0).toInt();
+      }
+    });
+
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,13 +74,26 @@ class _HomeWeatherState extends State<HomeWeather> {
     searchFocusNode.addListener(_onSearchFocusChange);
     searchController.addListener(_searchCity);
 
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    settingsProvider.addListener(_settingsChanged);
+
     DateTime now = DateTime.now();
     setState(() {
       currentDate = DateFormat('EEEE, d MMMM').format(now);
     });
 
     // Fetch weather data when the widget is initialized
-    _fetchWeatherData("Portsmouth", "United Kingdom", "GB"); // TODO: Replace with user's location or default city
+    _checkForCurrentWeather();
+  }
+
+  void _checkForCurrentWeather() async {
+    final storageUtils = StorageUtils();
+    CurrentWeather? storedWeather = await storageUtils.getCurrentWeatherFromStorage();
+    if(storedWeather == null){
+      _fetchWeatherData("Portsmouth", "United Kingdom", "GB");
+    }else{
+      _fetchWeatherData(storedWeather.location, storedWeather.country, storedWeather.countryCode);
+    }
   }
 
   void _fetchWeatherData(String city, String country, String countryCode) async {
@@ -63,10 +101,21 @@ class _HomeWeatherState extends State<HomeWeather> {
     GetWeatherObject getWeatherObject =
         await WeatherAPI().getCurrentWeather(city, country, countryCode);
 
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+
     if (getWeatherObject.statusCode == 200) {
       setState(() {
         currentWeather = getWeatherObject.currentWeather;
         primaryColor = ColourDictionary().getWeatherColour(currentWeather!.weatherType);
+        if( settings.isCelsius) {
+          currentTemperature = currentWeather!.temperature.toInt();
+          currentFeelsLike = currentWeather!.feelsLike.toInt();
+        } else if(!settings.isCelsius) {
+          currentTemperature = celsiusToFahrenheit(currentWeather!.temperature).toInt();
+          currentFeelsLike = celsiusToFahrenheit(currentWeather!.feelsLike).toInt();
+        }
+
+        if(currentWeather != null) StorageUtils().storeCurrentWeather(currentWeather!);
       });
     } else {
       print("Error fetching weather data: ${getWeatherObject.errorMessage}");
@@ -145,320 +194,339 @@ class _HomeWeatherState extends State<HomeWeather> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _key,
-      resizeToAvoidBottomInset: false,
-      body: AnimatedContainer(
-        duration: colourTransitionDuration,
-        curve: Curves.easeInOut,
-        color: primaryColor,
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Column(
+
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, child){
+
+        return Scaffold(
+          key: _key,
+          resizeToAvoidBottomInset: false,
+          body: AnimatedContainer(
+            duration: colourTransitionDuration,
+            curve: Curves.easeInOut,
+            color: primaryColor,
+            child: SafeArea(
+              child: Stack(
                 children: [
-                  // Centered Information
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Column(
                     children: [
-                      Column(
+                      // Centered Information
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 40),
-        
-                          // Location
-                          Text(
-                            currentWeather != null
-                                ? currentWeather!.country
-                                : "Loading...",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                showSearchBar = !showSearchBar;
-                                searchController.clear();
-                                if (showSearchBar) {
-                                  searchFocusNode.requestFocus();
-                                } else {
-                                  searchFocusNode.unfocus();
-                                }
-                              });
-                            },
-                            child: Row(
-                              children: [
-                                Text(
-                                  currentWeather != null
-                                      ? currentWeather!.location
-                                      : "Loading...",
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Icon(
-                                  Icons.search,
-                                  color: Colors.black,
-                                  size: 20,
-                                )
-                              ],
-                            ),
-                          ),
-        
-                          const SizedBox(height: 31),
-        
-                          // Date
-                          Container(
-                            padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: AnimatedDefaultTextStyle(
-                              duration: colourTransitionDuration,
-                              curve: Curves.easeInOut,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                color: primaryColor,
-                              ),
-                              child: Text(
-                                currentDate,
-                              ),
-                            ),
-                          ),
-        
-                          const SizedBox(height: 13),
-        
-                          // Current Weather
-                          Row(
+                          Column(
                             children: [
+                              const SizedBox(height: 40),
+
+                              // Location
                               Text(
                                 currentWeather != null
-                                    ? WeatherConverter().getWeatherString(currentWeather!.weatherType)
-                                    : "",
+                                    ? currentWeather!.country
+                                    : "Loading...",
                                 style: TextStyle(
-                                  fontSize: 17,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w400,
                                   color: Colors.black,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Icon(
-                                WeatherConverter().getIcon(currentWeather?.weatherType ?? ""),
-                                color: Colors.black,
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    showSearchBar = !showSearchBar;
+                                    searchController.clear();
+                                    if (showSearchBar) {
+                                      searchFocusNode.requestFocus();
+                                    } else {
+                                      searchFocusNode.unfocus();
+                                    }
+                                  });
+                                },
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      currentWeather != null
+                                          ? currentWeather!.location
+                                          : "Loading...",
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(
+                                      Icons.search,
+                                      color: Colors.black,
+                                      size: 20,
+                                    )
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 31),
+
+                              // Date
+                              Container(
+                                padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                child: AnimatedDefaultTextStyle(
+                                  duration: colourTransitionDuration,
+                                  curve: Curves.easeInOut,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: primaryColor,
+                                  ),
+                                  child: Text(
+                                    currentDate,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 13),
+
+                              // Current Weather
+                              Row(
+                                children: [
+                                  Text(
+                                    currentWeather != null
+                                        ? WeatherConverter().getWeatherString(currentWeather!.weatherType)
+                                        : "",
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    WeatherConverter().getIcon(currentWeather?.weatherType ?? ""),
+                                    color: Colors.black,
+                                  )
+                                ],
+                              ),
+
+                              const SizedBox(height: 31),
+                              // Temperature
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic, // Important for baseline alignment
+                                children: [
+                                  Text(
+                                    currentWeather != null ? "${currentTemperature.toInt()}°" : "",
+                                    style: const TextStyle(
+                                      fontSize: 177,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    settings.isCelsius
+                                        ? "C"
+                                        : "F",
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
                               )
+
                             ],
-                          ),
-        
-                          const SizedBox(height: 31),
-                          // Temperature
-                          Text(
-                            currentWeather != null
-                                ? "${currentWeather!.temperature}°"
-                                : "",
-                            style: TextStyle(
-                              fontSize: 177,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                            ),
-                          ),
+                          )
                         ],
-                      )
-                    ],
-                  ),
-        
-                  const SizedBox(height: 16),
-        
-                  // Weather Details and Weekly forecast
-                  Padding(
-                    padding: const EdgeInsets.only(left: 28, right: 28),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Weather Details and Weekly forecast
+                      Padding(
+                        padding: const EdgeInsets.only(left: 28, right: 28),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const SizedBox(height: 40),
-                            // Daily Summary
-                            Column(
+                            Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "Daily Summary",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black,
-                                  ),
+                                const SizedBox(height: 40),
+                                // Daily Summary
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Daily Summary",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      currentWeather != null
+                                          ? "Now it feels like +${currentWeather!.feelsLike}°, actually +${currentWeather!.temperature}°."
+                                          : "Loading weather data...",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        color: Colors.black,
+                                      ),
+                                    )
+                                  ],
                                 ),
-                                Text(
-                                  currentWeather != null
-                                      ? "Now it feels like +${currentWeather!.feelsLike}°, actually +${currentWeather!.temperature}°."
-                                      : "Loading weather data...",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black,
-                                  ),
-                                )
                               ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            spacing: 30,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    TweenAnimationBuilder<Color?>(
-                                        tween: ColorTween(end: primaryColor),
-                                        duration: colourTransitionDuration,
-                                        builder:(context, color, child) {
-                                          return Icon(
-                                            Icons.waves_outlined,
-                                            color: color,
-                                            size: 70,
-                                          );
-                                        }
-                                    ),
-                                    AnimatedDefaultTextStyle(
-                                      duration: colourTransitionDuration,
-                                      curve: Curves.easeInOut,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: primaryColor,
-                                      ),
-                                      child: Text(
-                                        currentWeather != null
-                                            ? "${currentWeather!.windSpeed.toInt()}km/h"
-                                            : "",
-                                      ),
-                                    ),
-                                    AnimatedDefaultTextStyle(
-                                      duration: colourTransitionDuration,
-                                      curve: Curves.easeInOut,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: primaryColor,
-                                      ),
-                                      child: Text(
-                                        "Wind",
-                                      ),
-                                    )
-                                  ],
-                                ),
+                            const SizedBox(height: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    TweenAnimationBuilder<Color?>(
-                                      tween: ColorTween(end: primaryColor),
-                                      duration: colourTransitionDuration,
-                                      builder:(context, color, child) {
-                                        return Icon(
-                                          Icons.water_drop_outlined,
-                                          color: color,
-                                          size: 70,
-                                        );
-                                      }
+                              padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                spacing: 30,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        TweenAnimationBuilder<Color?>(
+                                            tween: ColorTween(end: primaryColor),
+                                            duration: colourTransitionDuration,
+                                            builder:(context, color, child) {
+                                              return Icon(
+                                                Icons.waves_outlined,
+                                                color: color,
+                                                size: 70,
+                                              );
+                                            }
+                                        ),
+                                        AnimatedDefaultTextStyle(
+                                          duration: colourTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryColor,
+                                          ),
+                                          child: Text(
+                                            currentWeather != null
+                                                ? "${currentWeather!.windSpeed.toInt()}km/h"
+                                                : "",
+                                          ),
+                                        ),
+                                        AnimatedDefaultTextStyle(
+                                          duration: colourTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: primaryColor,
+                                          ),
+                                          child: Text(
+                                            "Wind",
+                                          ),
+                                        )
+                                      ],
                                     ),
-                                    AnimatedDefaultTextStyle(
-                                      duration: colourTransitionDuration,
-                                      curve: Curves.easeInOut,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: primaryColor,
-                                      ),
-                                      child: Text(
-                                        currentWeather != null
-                                            ? "${currentWeather!.humidity.toInt()}%"
-                                            : "",
-                                      ),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        TweenAnimationBuilder<Color?>(
+                                            tween: ColorTween(end: primaryColor),
+                                            duration: colourTransitionDuration,
+                                            builder:(context, color, child) {
+                                              return Icon(
+                                                Icons.water_drop_outlined,
+                                                color: color,
+                                                size: 70,
+                                              );
+                                            }
+                                        ),
+                                        AnimatedDefaultTextStyle(
+                                          duration: colourTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryColor,
+                                          ),
+                                          child: Text(
+                                            currentWeather != null
+                                                ? "${currentWeather!.humidity.toInt()}%"
+                                                : "",
+                                          ),
+                                        ),
+                                        AnimatedDefaultTextStyle(
+                                          duration: colourTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: primaryColor,
+                                          ),
+                                          child: Text(
+                                            "Humidity",
+                                          ),
+                                        )
+                                      ],
                                     ),
-                                    AnimatedDefaultTextStyle(
-                                      duration: colourTransitionDuration,
-                                      curve: Curves.easeInOut,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: primaryColor,
-                                      ),
-                                      child: Text(
-                                        "Humidity",
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    TweenAnimationBuilder<Color?>(
-                                        tween: ColorTween(end: primaryColor),
-                                        duration: colourTransitionDuration,
-                                        builder:(context, color, child) {
-                                          return Icon(
-                                            Icons.remove_red_eye,
-                                            color: color,
-                                            size: 70,
-                                          );
-                                        }
-                                    ),
-                                    AnimatedDefaultTextStyle(
-                                      duration: colourTransitionDuration,
-                                      curve: Curves.easeInOut,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: primaryColor,
-                                      ),
-                                      child: Text(
-                                        currentWeather != null
-                                            ? currentWeather!.visibility % 1 == 0
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        TweenAnimationBuilder<Color?>(
+                                            tween: ColorTween(end: primaryColor),
+                                            duration: colourTransitionDuration,
+                                            builder:(context, color, child) {
+                                              return Icon(
+                                                Icons.remove_red_eye,
+                                                color: color,
+                                                size: 70,
+                                              );
+                                            }
+                                        ),
+                                        AnimatedDefaultTextStyle(
+                                          duration: colourTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryColor,
+                                          ),
+                                          child: Text(
+                                            currentWeather != null
+                                                ? currentWeather!.visibility % 1 == 0
                                                 ? "${currentWeather!.visibility.toInt()}km"
                                                 : "${currentWeather!.visibility.toStringAsFixed(1)}km"
-                                            : "",
-                                      ),
+                                                : "",
+                                          ),
+                                        ),
+                                        AnimatedDefaultTextStyle(
+                                          duration: colourTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: primaryColor,
+                                          ),
+                                          child: Text(
+                                            "Visibility",
+                                          ),
+                                        )
+                                      ],
                                     ),
-                                    AnimatedDefaultTextStyle(
-                                      duration: colourTransitionDuration,
-                                      curve: Curves.easeInOut,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: primaryColor,
-                                      ),
-                                      child: Text(
-                                        "Visibility",
-                                      ),
-                                    )
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-        
-                        /*
-        
+                            ),
+
+                            /*
+
                         const SizedBox(height: 12),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,242 +551,251 @@ class _HomeWeatherState extends State<HomeWeather> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-        
+
                             for (int i = 0; i < 4; i++)
                               DayWeatherCard(
                                 key: Key("day_$i"),
                               ),
-        
+
                           ],
                         )
-        
+
                         */
-                      ],
-                    ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-        
-              // Search bar
-              showSearchBar
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Column(
-                          children: [
-                            const SizedBox(height: 100),
-                            GlassContainer(
-                              child: SizedBox(
-                                width: MediaQuery.of(context).size.width * 0.5,
-                                height: 20,
-                                child: TextField(
-                                  focusNode: searchFocusNode,
-                                  controller: searchController,
-                                  decoration: InputDecoration(
-                                      filled: false,
-                                      hintText: "Search for a city...",
-                                      hintStyle: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                      ),
-                                      border: InputBorder.none,
-                                      suffixIcon: isSearchFocused
-                                          ? IconButton(
-                                              padding: EdgeInsets.zero,
-                                              onPressed: () {
-                                                setState(() {
-                                                  searchController.clear();
-                                                  searchedLocations.clear();
-                                                });
-                                              },
-                                              icon: Icon(Icons.clear,
-                                                  color: Colors.black, size: 20),
-                                            )
-                                          : Icon(Icons.search,
-                                              color: Colors.black, size: 20)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-        
-                            for (final location in searchedLocations)
-                              GestureDetector(
-                                onTap: (){
-                                  setState(() {
-                                    showSearchBar = false;
-                                    searchController.clear();
-                                    searchedLocations.clear();
-                                    searchFocusNode.unfocus();
-                                  });
-                                  _fetchWeatherData(location.name, location.country, location.countryCode);
-                                },
-                                child: Column(
-                                  children: [
-                                    SearchResult(
-                                      cityName: location.name,
-                                      countryName: location.country,
-                                      countryCode: location.countryCode,
+
+                  // Search bar
+                  showSearchBar
+                      ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Column(
+                        children: [
+                          const SizedBox(height: 100),
+                          GlassContainer(
+                            child: SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.5,
+                              height: 20,
+                              child: TextField(
+                                focusNode: searchFocusNode,
+                                controller: searchController,
+                                decoration: InputDecoration(
+                                    filled: false,
+                                    hintText: "Search for a city...",
+                                    hintStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
                                     ),
-                                    const SizedBox(height: 8),
-                                  ],
+                                    border: InputBorder.none,
+                                    suffixIcon: isSearchFocused
+                                        ? IconButton(
+                                      padding: EdgeInsets.zero,
+                                      onPressed: () {
+                                        setState(() {
+                                          searchController.clear();
+                                          searchedLocations.clear();
+                                        });
+                                      },
+                                      icon: Icon(Icons.clear,
+                                          color: Colors.black, size: 20),
+                                    )
+                                        : Icon(Icons.search,
+                                        color: Colors.black, size: 20)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          for (final location in searchedLocations)
+                            GestureDetector(
+                              onTap: (){
+                                setState(() {
+                                  showSearchBar = false;
+                                  searchController.clear();
+                                  searchedLocations.clear();
+                                  searchFocusNode.unfocus();
+                                });
+                                _fetchWeatherData(location.name, location.country, location.countryCode);
+                              },
+                              child: Column(
+                                children: [
+                                  SearchResult(
+                                    cityName: location.name,
+                                    countryName: location.country,
+                                    countryCode: location.countryCode,
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                              ),
+                            ),
+
+                        ],
+                      )
+                    ],
+                  )
+                      : const SizedBox.shrink(),
+
+                  // Error message
+                  showErrorMessage ? Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 30),
+                      child: GlassContainer(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                errorMessage,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.black,
                                 ),
                               ),
-        
-                          ],
-                        )
-                      ],
-                    )
-                  : const SizedBox.shrink(),
-        
-              // Error message
-              showErrorMessage ? Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 30),
-                  child: GlassContainer(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            errorMessage,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ) : const SizedBox.shrink(),
-
-              // Drawer Button
-              IconButton(
-                  onPressed: () {
-                    if (_key.currentState!.isDrawerOpen) {
-                      _key.currentState!.closeDrawer();
-                    } else {
-                      _key.currentState!.openDrawer();
-                    }
-                  },
-                  icon: Icon(
-                    Icons.menu,
-                    color: Colors.black,
-                    size: 30,
-                  )
-              ),
-        
-            ],
-          ),
-        ),
-      ),
-      drawer: Drawer(
-        backgroundColor: Colors.black,
-        width: MediaQuery.of(context).size.width * 0.5,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topRight: Radius.circular(12),
-            bottomRight: Radius.circular(12),
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 100,
-              color: primaryColor,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              alignment: Alignment.bottomLeft,
-              child: const Text(
-                "ForWeather",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            /// Use Expanded to fill the remaining space
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.settings, color: Colors.white),
-                    title: const Text(
-                      "Settings",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onTap: () {
-                      // Handle settings tap
-                    },
-                  ),
-                  const Spacer(), // Push the version to the bottom
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Version 1.0.0",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white54,
-                          ),
-                        ),
-                        Text(
-                          "© 2025 ForWeather",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white54,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Text(
-                              "Made with ❤️ by ",
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white54,
-                              ),
-                            ),
-                            Text(
-                              "Jack Trowbridge",
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white54,
-                              ),
                             ),
                           ],
-                        )
-                      ],
+                        ),
+                      ),
                     ),
+                  ) : const SizedBox.shrink(),
+
+                  // Drawer Button
+                  IconButton(
+                      onPressed: () {
+                        if (_key.currentState!.isDrawerOpen) {
+                          _key.currentState!.closeDrawer();
+                        } else {
+                          _key.currentState!.openDrawer();
+                        }
+                      },
+                      icon: Icon(
+                        Icons.menu,
+                        color: Colors.black,
+                        size: 30,
+                      )
                   ),
+
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+          drawer: Drawer(
+            backgroundColor: Colors.black,
+            width: MediaQuery.of(context).size.width * 0.5,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 100,
+                  color: primaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  alignment: Alignment.bottomLeft,
+                  child: const Text(
+                    "ForWeather",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                /// Use Expanded to fill the remaining space
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.settings, color: primaryColor),
+                        title: Text(
+                          "Settings",
+                          style: TextStyle(color: primaryColor),
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SettingsPage(currentColour: primaryColor),
+                            ),
+                          );
+                        },
+                      ),
+                      const Spacer(), // Push the version to the bottom
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Version 1.0.0",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white54,
+                              ),
+                            ),
+                            Text(
+                              "© 2025 ForWeather",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white54,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  "Made with ❤️ by ",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white54,
+                                  ),
+                                ),
+                                Text(
+                                  "Jack Trowbridge",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white54,
+                                  ),
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
 
 
+        );
+
+      }
     );
+
   }
 }
 
@@ -753,51 +830,6 @@ class DayWeatherCard extends StatelessWidget {
   }
 }
 
-class GlassContainer extends StatelessWidget {
-  final Widget child;
-  final width;
-
-  const GlassContainer({super.key, required this.child, this.width});
-
-  @override
-  Widget build(BuildContext context) {
-    if (width != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-          child: Container(
-            width: width,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.2), width: 1.5),
-            ),
-            child: child,
-          ),
-        ),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-          decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2), width: 1.5),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
 
 class SearchResult extends StatelessWidget {
   final String? cityName;
