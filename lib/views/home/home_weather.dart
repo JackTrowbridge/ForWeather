@@ -33,7 +33,7 @@ class _HomeWeatherState extends State<HomeWeather> {
   List<Location> searchedLocations = [];
 
   bool showErrorMessage = false;
-  String defaultErrorMessage = "We couldn't find the weather for this location. Please try again 😢";
+  String defaultErrorMessage = "We couldn't find the weather for this location. Please try again.";
   String errorMessage = "";
 
   @override
@@ -70,7 +70,7 @@ class _HomeWeatherState extends State<HomeWeather> {
       });
       if(getWeatherObject.errorMessage == "city not found") { // TODO: Handle this better, maybe use status codes
         setState(() {
-          errorMessage = "We couldn't find weather for $city, $country. Please try again 😢";
+          errorMessage = "We couldn't find weather for $city, $country. Please try again.";
         });
         Future.delayed(const Duration(seconds: 5), () {
           setState(() {
@@ -168,6 +168,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                           onTap: () {
                             setState(() {
                               showSearchBar = !showSearchBar;
+                              searchController.clear();
                               if (showSearchBar) {
                                 searchFocusNode.requestFocus();
                               } else {
