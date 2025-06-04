@@ -9,7 +9,7 @@ class WeatherAPI {
 
   Future<GetWeatherObject> getCurrentWeather(String city) async {
 
-    final String apiKey = APIKey().getAPIKey();
+    final String apiKey = APIKey().getOpenWeatherAPIKey();
 
     Map<String, String> headers = {
       "Content-Type": "application/json",

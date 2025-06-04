@@ -1,3 +1,7 @@
+import 'dart:ui';
+
+import 'package:easy_debounce/easy_debounce.dart';
+import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -17,9 +21,17 @@ class _HomeWeatherState extends State<HomeWeather> {
   CurrentWeather? currentWeather;
   String currentDate = "";
 
+  bool showSearchBar = true;
+  TextEditingController searchController = TextEditingController();
+  FocusNode searchFocusNode = FocusNode();
+  bool isSearchFocused = false;
+
   @override
   void initState() {
     super.initState();
+
+    searchFocusNode.addListener(_onSearchFocusChange);
+    searchController.addListener(_searchCity);
 
     DateTime now = DateTime.now();
     setState(() {
@@ -30,21 +42,37 @@ class _HomeWeatherState extends State<HomeWeather> {
     _fetchWeatherData();
   }
 
-  void _fetchWeatherData() async{
+  void _fetchWeatherData() async {
     print("Fetching weather data...");
 
-    GetWeatherObject getWeatherObject = await WeatherAPI().getCurrentWeather("Portsmouth");
+    GetWeatherObject getWeatherObject = await WeatherAPI().getCurrentWeather(
+        "Portsmouth");
 
     if (getWeatherObject.statusCode == 200) {
-
       setState(() {
         currentWeather = getWeatherObject.currentWeather;
       });
-
     } else {
       print("Error fetching weather data: ${getWeatherObject.errorMessage}");
     }
+  }
 
+  void _onSearchFocusChange() {
+    setState(() {
+      isSearchFocused = !isSearchFocused;
+    });
+  }
+
+  void _searchCity() {
+    EasyDebounce.debounce(
+        'searchCity',
+        Duration(milliseconds: 500),
+        () => _search(searchController.text)
+    );
+  }
+
+  void _search(String input){
+    print("Searching for city: $input");
   }
 
   @override
@@ -52,262 +80,337 @@ class _HomeWeatherState extends State<HomeWeather> {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 255, 255, 66),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Centered Information
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                Column(
+                // Centered Information
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 40),
-
-                    // Location
-                    Text(
-                      currentWeather != null
-                          ? currentWeather!.location
-                          : "Loading...",
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                      ),
-                    ),
-
-                    const SizedBox(height: 31),
-
-                    // Date
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        currentDate,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: Color.fromARGB(255, 255, 255, 66),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 13),
-
-                    // Current Weather
-                    Row(
+                    Column(
                       children: [
+                        const SizedBox(height: 40),
+
+                        // Location
+                        GestureDetector(
+                          onTap: () {
+                            // Handle location edit action
+                            print("Edit location tapped");
+                          },
+                          child: Row(
+                            children: [
+                              Text(
+                                currentWeather != null
+                                    ? currentWeather!.location
+                                    : "Loading...",
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                Icons.edit,
+                                color: Colors.black,
+                                size: 32,
+                              )
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 31),
+
+                        // Date
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            currentDate,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Color.fromARGB(255, 255, 255, 66),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 13),
+
+                        // Current Weather
+                        Row(
+                          children: [
+                            Text(
+                              currentWeather != null
+                                  ? currentWeather!.weatherType
+                                  : "",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.cloud_outlined,
+                              color: Colors.black,
+                            )
+                          ],
+                        ),
+
+                        const SizedBox(height: 31),
+                        // Temperature
                         Text(
                           currentWeather != null
-                              ? currentWeather!.weatherType
+                              ? "${currentWeather!.temperature}°"
                               : "",
                           style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w400,
+                            fontSize: 177,
+                            fontWeight: FontWeight.w600,
                             color: Colors.black,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.cloud_outlined,
-                          color: Colors.black,
-                        )
                       ],
-                    ),
-
-                    const SizedBox(height: 31),
-                    // Temperature
-                    Text(
-                      currentWeather != null
-                          ? "${currentWeather!.temperature}°"
-                          : "",
-                      style: TextStyle(
-                        fontSize: 177,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
+                    )
                   ],
-                )
+                ),
+
+                const SizedBox(height: 16),
+
+                // Weather Details and Weekly forecast
+                Padding(
+                  padding: const EdgeInsets.only(left: 28, right: 28),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 40),
+                          // Daily Summary
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Daily Summary",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              Text(
+                                currentWeather != null
+                                    ? "Now it feels like +${currentWeather!
+                                    .feelsLike}°, actually +${currentWeather!
+                                    .temperature}°."
+                                    : "Loading weather data...",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.black,
+                                ),
+                              )
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.all(20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          spacing: 40,
+                          children: [
+                            Column(
+                              children: [
+                                Icon(
+                                  Icons.waves_outlined,
+                                  color: Color.fromARGB(255, 255, 255, 66),
+                                  size: 70,
+                                ),
+                                Text(
+                                  currentWeather != null
+                                      ? "${currentWeather!.windSpeed
+                                      .toInt()}km/h"
+                                      : "",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  ),
+                                ),
+                                Text(
+                                  "Wind",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  ),
+                                )
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Icon(
+                                  Icons.water_drop_outlined,
+                                  color: Color.fromARGB(255, 255, 255, 66),
+                                  size: 70,
+                                ),
+                                Text(
+                                  currentWeather != null
+                                      ? "${currentWeather!.humidity.toInt()}%"
+                                      : "",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  ),
+                                ),
+                                Text(
+                                  "Humidity",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  ),
+                                )
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Icon(
+                                  Icons.remove_red_eye,
+                                  color: Color.fromARGB(255, 255, 255, 66),
+                                  size: 70,
+                                ),
+                                Text(
+                                  currentWeather != null
+                                      ? currentWeather!.visibility % 1 == 0
+                                      ? "${currentWeather!.visibility
+                                      .toInt()}km"
+                                      : "${currentWeather!.visibility
+                                      .toStringAsFixed(1)}km"
+                                      : "",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  ),
+                                ),
+                                Text(
+                                  "Visibility",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      /*
+
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 40),
+                          // Daily Summary
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Weekly Forecast",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+
+                          for (int i = 0; i < 4; i++)
+                            DayWeatherCard(
+                              key: Key("day_$i"),
+                            ),
+
+                        ],
+                      )
+
+                      */
+                    ],
+                  ),
+                ),
               ],
             ),
 
-            const SizedBox(height: 16),
+            // Search bar
+            showSearchBar ? Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
 
-            // Weather Details and Weekly forecast
-            Padding(
-              padding: const EdgeInsets.only(left: 28, right: 28),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 40),
-                      // Daily Summary
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Daily Summary",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
+
+                Column(
+                  children: [
+                    const SizedBox(height: 90),
+
+                    GlassContainer(
+                        child: SizedBox(
+                          width: MediaQuery
+                              .of(context)
+                              .size
+                              .width * 0.5,
+                          height: 20,
+                          child: TextField(
+                            focusNode: searchFocusNode,
+                            controller: searchController,
+                            decoration: InputDecoration(
+                                filled: false,
+                                hintText: "Search for a city...",
+                                hintStyle: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                ),
+                                border: InputBorder.none,
+                                suffixIcon: isSearchFocused ? IconButton(
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    searchController.clear();
+                                  },
+                                  icon: Icon(Icons.clear, color: Colors.black,
+                                      size: 20),
+                                ) : Icon(Icons.search, color: Colors.black,
+                                    size: 20)
                             ),
                           ),
-                          Text(
-                            currentWeather != null
-                                ? "Now it feels like +${currentWeather!.feelsLike}°, actually +${currentWeather!.temperature}°."
-                                : "Loading weather data...",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black,
-                            ),
-                          )
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
+                        ),
                     ),
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      spacing: 40,
-                      children: [
-                        Column(
-                          children: [
-                            Icon(
-                              Icons.waves_outlined,
-                              color: Color.fromARGB(255, 255, 255, 66),
-                              size: 70,
-                            ),
-                            Text(
-                              currentWeather != null
-                                  ? "${currentWeather!.windSpeed.toInt()}km/h"
-                                  : "",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Color.fromARGB(255, 255, 255, 66),
-                              ),
-                            ),
-                            Text(
-                              "Wind",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: Color.fromARGB(255, 255, 255, 66),
-                              ),
-                            )
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            Icon(
-                              Icons.water_drop_outlined,
-                              color: Color.fromARGB(255, 255, 255, 66),
-                              size: 70,
-                            ),
-                            Text(
-                              currentWeather != null
-                                  ? "${currentWeather!.humidity.toInt()}%"
-                                  : "",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Color.fromARGB(255, 255, 255, 66),
-                              ),
-                            ),
-                            Text(
-                              "Humidity",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: Color.fromARGB(255, 255, 255, 66),
-                              ),
-                            )
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            Icon(
-                              Icons.remove_red_eye,
-                              color: Color.fromARGB(255, 255, 255, 66),
-                              size: 70,
-                            ),
-                            Text(
-                              currentWeather != null
-                                  ? currentWeather!.visibility % 1 == 0
-                                      ? "${currentWeather!.visibility.toInt()}km"
-                                      : "${currentWeather!.visibility.toStringAsFixed(1)}km"
-                                  : "",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Color.fromARGB(255, 255, 255, 66),
-                              ),
-                            ),
-                            Text(
-                              "Visibility",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: Color.fromARGB(255, 255, 255, 66),
-                              ),
-                            )
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  /*
+                  ],
+                )
 
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 40),
-                      // Daily Summary
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Weekly Forecast",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
+              ],
+            )
+                : const SizedBox.shrink(),
 
-                      for (int i = 0; i < 4; i++)
-                        DayWeatherCard(
-                          key: Key("day_$i"),
-                        ),
-
-                    ],
-                  )
-
-                  */
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -341,6 +444,34 @@ class DayWeatherCard extends StatelessWidget {
           ),
           Text("21 Jan")
         ],
+      ),
+    );
+  }
+}
+
+class GlassContainer extends StatelessWidget {
+  final Widget child;
+  const GlassContainer({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return
+    ClipRRect(
+      borderRadius: BorderRadius.all(Radius.circular(25)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.all(Radius.circular(25)),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1.5
+            ),
+          ),
+          child: child,
+        ),
       ),
     );
   }
