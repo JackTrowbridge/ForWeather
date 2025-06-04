@@ -6,6 +6,7 @@ import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:forweather/api/api_key.dart';
 import 'package:forweather/models/location.dart';
+import 'package:forweather/utils/weather_converter.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/current_weather.dart';
@@ -23,7 +24,7 @@ class _HomeWeatherState extends State<HomeWeather> {
   CurrentWeather? currentWeather;
   String currentDate = "";
 
-  bool showSearchBar = true;
+  bool showSearchBar = false;
   TextEditingController searchController = TextEditingController();
   FocusNode searchFocusNode = FocusNode();
   bool isSearchFocused = false;
@@ -43,14 +44,14 @@ class _HomeWeatherState extends State<HomeWeather> {
     });
 
     // Fetch weather data when the widget is initialized
-    _fetchWeatherData();
+    _fetchWeatherData("Portsmouth", "United Kingdom", "GB"); // TODO: Replace with user's location or default city
   }
 
-  void _fetchWeatherData() async {
+  void _fetchWeatherData(String city, String country, String countryCode) async {
     print("Fetching weather data...");
 
     GetWeatherObject getWeatherObject =
-        await WeatherAPI().getCurrentWeather("Portsmouth");
+        await WeatherAPI().getCurrentWeather(city, country, countryCode);
 
     if (getWeatherObject.statusCode == 200) {
       setState(() {
@@ -106,6 +107,7 @@ class _HomeWeatherState extends State<HomeWeather> {
       final location = Location(
         name: hit["city"] ?? "Unknown",
         country: hit["country"] ?? "Unknown",
+        countryCode: hit["iso2"] ?? "Unknown",
       );
 
       setState(() {
@@ -133,10 +135,26 @@ class _HomeWeatherState extends State<HomeWeather> {
                         const SizedBox(height: 40),
 
                         // Location
+                        Text(
+                          currentWeather != null
+                              ? currentWeather!.country
+                              : "Loading...",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
+                          ),
+                        ),
                         GestureDetector(
                           onTap: () {
-                            // Handle location edit action
-                            print("Edit location tapped");
+                            setState(() {
+                              showSearchBar = !showSearchBar;
+                              if (showSearchBar) {
+                                searchFocusNode.requestFocus();
+                              } else {
+                                searchFocusNode.unfocus();
+                              }
+                            });
                           },
                           child: Row(
                             children: [
@@ -152,9 +170,9 @@ class _HomeWeatherState extends State<HomeWeather> {
                               ),
                               const SizedBox(width: 6),
                               Icon(
-                                Icons.edit,
+                                Icons.search,
                                 color: Colors.black,
-                                size: 32,
+                                size: 20,
                               )
                             ],
                           ),
@@ -186,7 +204,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                           children: [
                             Text(
                               currentWeather != null
-                                  ? currentWeather!.weatherType
+                                  ? WeatherConverter().getWeatherString(currentWeather!.weatherType)
                                   : "",
                               style: TextStyle(
                                 fontSize: 17,
@@ -196,7 +214,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                             ),
                             const SizedBox(width: 6),
                             Icon(
-                              Icons.cloud_outlined,
+                              WeatherConverter().getIcon(currentWeather?.weatherType ?? ""),
                               color: Colors.black,
                             )
                           ],
@@ -404,7 +422,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                     children: [
                       Column(
                         children: [
-                          const SizedBox(height: 90),
+                          const SizedBox(height: 100),
                           GlassContainer(
                             child: SizedBox(
                               width: MediaQuery.of(context).size.width * 0.5,
@@ -440,14 +458,26 @@ class _HomeWeatherState extends State<HomeWeather> {
                           const SizedBox(height: 10),
 
                           for (final location in searchedLocations)
-                            Column(
-                              children: [
-                                SearchResult(
-                                  cityName: location.name,
-                                  countryName: location.country,
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                            GestureDetector(
+                              onTap: (){
+                                setState(() {
+                                  showSearchBar = false;
+                                  searchController.clear();
+                                  searchedLocations.clear();
+                                  searchFocusNode.unfocus();
+                                });
+                                _fetchWeatherData(location.name, location.country, location.countryCode);
+                              },
+                              child: Column(
+                                children: [
+                                  SearchResult(
+                                    cityName: location.name,
+                                    countryName: location.country,
+                                    countryCode: location.countryCode,
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                              ),
                             ),
 
                         ],
@@ -503,7 +533,7 @@ class GlassContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     if (width != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.all(Radius.circular(25)),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
           child: Container(
@@ -511,7 +541,7 @@ class GlassContainer extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             decoration: BoxDecoration(
               color: Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.all(Radius.circular(25)),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
               border: Border.all(
                   color: Colors.white.withValues(alpha: 0.2), width: 1.5),
             ),
@@ -521,14 +551,14 @@ class GlassContainer extends StatelessWidget {
       );
     }
     return ClipRRect(
-      borderRadius: BorderRadius.all(Radius.circular(25)),
+      borderRadius: BorderRadius.all(Radius.circular(12)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
           decoration: BoxDecoration(
             color: Colors.grey.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.all(Radius.circular(25)),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
             border: Border.all(
                 color: Colors.white.withValues(alpha: 0.2), width: 1.5),
           ),
@@ -542,29 +572,44 @@ class GlassContainer extends StatelessWidget {
 class SearchResult extends StatelessWidget {
   final String? cityName;
   final String? countryName;
-  const SearchResult({super.key, required this.cityName, required this.countryName});
+  final String? countryCode;
+  const SearchResult({super.key, required this.cityName, required this.countryName, required this.countryCode});
 
   @override
   Widget build(BuildContext context) {
     return GlassContainer(
-        width: MediaQuery.of(context).size.width * 0.5,
+        width: MediaQuery.of(context).size.width * 0.6,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.location_on_outlined,
               color: Colors.black,
               size: 20,
             ),
+            const SizedBox(width: 8),
             Flexible(
-              child: Text(
-                "$cityName, $countryName",
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "$cityName",
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    "$countryName",
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

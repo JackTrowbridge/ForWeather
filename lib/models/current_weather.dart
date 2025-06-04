@@ -6,6 +6,7 @@ class CurrentWeather{
   final double humidity;
   final double visibility;
   final String location;
+  final String country;
 
   CurrentWeather({
     required this.weatherType,
@@ -15,6 +16,7 @@ class CurrentWeather{
     required this.humidity,
     required this.visibility,
     required this.location,
+    required this.country,
   });
 
 }

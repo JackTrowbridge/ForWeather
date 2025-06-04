@@ -7,7 +7,7 @@ import '../models/get_weather_object.dart';
 
 class WeatherAPI {
 
-  Future<GetWeatherObject> getCurrentWeather(String city) async {
+  Future<GetWeatherObject> getCurrentWeather(String city, String country, String countryCode) async {
 
     final String apiKey = APIKey().getOpenWeatherAPIKey();
 
@@ -17,7 +17,7 @@ class WeatherAPI {
     };
 
     final Uri url = Uri.parse(
-        "https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$apiKey&units=metric");
+        "https://api.openweathermap.org/data/2.5/weather?q=$city,$countryCode&appid=$apiKey&units=metric");
 
     try {
       final response = await http.get(url, headers: headers).timeout(
@@ -39,6 +39,7 @@ class WeatherAPI {
           humidity: responseParsed["main"]["humidity"].ddoubleValue,
           visibility: responseParsed["visibility"].ddoubleValue / 1000,
           location: responseParsed["name"].stringValue,
+          country: country,
       );
 
       return GetWeatherObject(
