@@ -21,6 +21,7 @@ class HomeWeather extends StatefulWidget {
 }
 
 class _HomeWeatherState extends State<HomeWeather> {
+
   CurrentWeather? currentWeather;
   String currentDate = "";
 
@@ -30,6 +31,10 @@ class _HomeWeatherState extends State<HomeWeather> {
   bool isSearchFocused = false;
 
   List<Location> searchedLocations = [];
+
+  bool showErrorMessage = false;
+  String defaultErrorMessage = "We couldn't find the weather for this location. Please try again 😢";
+  String errorMessage = "";
 
   @override
   void initState() {
@@ -48,7 +53,6 @@ class _HomeWeatherState extends State<HomeWeather> {
   }
 
   void _fetchWeatherData(String city, String country, String countryCode) async {
-    print("Fetching weather data...");
 
     GetWeatherObject getWeatherObject =
         await WeatherAPI().getCurrentWeather(city, country, countryCode);
@@ -59,6 +63,23 @@ class _HomeWeatherState extends State<HomeWeather> {
       });
     } else {
       print("Error fetching weather data: ${getWeatherObject.errorMessage}");
+
+      setState(() {
+        showErrorMessage = true;
+        errorMessage = defaultErrorMessage;
+      });
+      if(getWeatherObject.errorMessage == "city not found") { // TODO: Handle this better, maybe use status codes
+        setState(() {
+          errorMessage = "We couldn't find weather for $city, $country. Please try again 😢";
+        });
+        Future.delayed(const Duration(seconds: 5), () {
+          setState(() {
+            showErrorMessage = false;
+            errorMessage = defaultErrorMessage;
+          });
+        });
+      }
+
     }
   }
 
@@ -75,7 +96,6 @@ class _HomeWeatherState extends State<HomeWeather> {
 
   void _search(String input) async {
 
-    print("Searching for city: $input");
     setState(() {
       searchedLocations.clear();
     });
@@ -112,7 +132,6 @@ class _HomeWeatherState extends State<HomeWeather> {
 
       setState(() {
         searchedLocations.add(location);
-        print("Found location: ${location.name}, ${location.country}");
       });
     }
   }
@@ -485,6 +504,37 @@ class _HomeWeatherState extends State<HomeWeather> {
                     ],
                   )
                 : const SizedBox.shrink(),
+
+            // Error message
+            showErrorMessage ? Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 30),
+                child: GlassContainer(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          errorMessage,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ) : const SizedBox.shrink(),
+
           ],
         ),
       ),

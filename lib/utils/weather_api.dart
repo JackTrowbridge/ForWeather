@@ -18,6 +18,7 @@ class WeatherAPI {
 
     final Uri url = Uri.parse(
         "https://api.openweathermap.org/data/2.5/weather?q=$city,$countryCode&appid=$apiKey&units=metric");
+    print("URL: " + url.toString());
 
     try {
       final response = await http.get(url, headers: headers).timeout(
