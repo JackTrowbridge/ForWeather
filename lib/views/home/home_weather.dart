@@ -139,6 +139,7 @@ class _HomeWeatherState extends State<HomeWeather> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Color.fromARGB(255, 255, 255, 66),
       body: SafeArea(
         child: Stack(
@@ -301,93 +302,99 @@ class _HomeWeatherState extends State<HomeWeather> {
                           color: Colors.black,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          spacing: 40,
+                          spacing: 30,
                           children: [
-                            Column(
-                              children: [
-                                Icon(
-                                  Icons.waves_outlined,
-                                  color: Color.fromARGB(255, 255, 255, 66),
-                                  size: 70,
-                                ),
-                                Text(
-                                  currentWeather != null
-                                      ? "${currentWeather!.windSpeed.toInt()}km/h"
-                                      : "",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.waves_outlined,
                                     color: Color.fromARGB(255, 255, 255, 66),
+                                    size: 70,
                                   ),
-                                ),
-                                Text(
-                                  "Wind",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  Text(
+                                    currentWeather != null
+                                        ? "${currentWeather!.windSpeed.toInt()}km/h"
+                                        : "",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color.fromARGB(255, 255, 255, 66),
+                                    ),
                                   ),
-                                )
-                              ],
+                                  Text(
+                                    "Wind",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color.fromARGB(255, 255, 255, 66),
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
-                            Column(
-                              children: [
-                                Icon(
-                                  Icons.water_drop_outlined,
-                                  color: Color.fromARGB(255, 255, 255, 66),
-                                  size: 70,
-                                ),
-                                Text(
-                                  currentWeather != null
-                                      ? "${currentWeather!.humidity.toInt()}%"
-                                      : "",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.water_drop_outlined,
                                     color: Color.fromARGB(255, 255, 255, 66),
+                                    size: 70,
                                   ),
-                                ),
-                                Text(
-                                  "Humidity",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  Text(
+                                    currentWeather != null
+                                        ? "${currentWeather!.humidity.toInt()}%"
+                                        : "",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color.fromARGB(255, 255, 255, 66),
+                                    ),
                                   ),
-                                )
-                              ],
+                                  Text(
+                                    "Humidity",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color.fromARGB(255, 255, 255, 66),
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
-                            Column(
-                              children: [
-                                Icon(
-                                  Icons.remove_red_eye,
-                                  color: Color.fromARGB(255, 255, 255, 66),
-                                  size: 70,
-                                ),
-                                Text(
-                                  currentWeather != null
-                                      ? currentWeather!.visibility % 1 == 0
-                                          ? "${currentWeather!.visibility.toInt()}km"
-                                          : "${currentWeather!.visibility.toStringAsFixed(1)}km"
-                                      : "",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.remove_red_eye,
                                     color: Color.fromARGB(255, 255, 255, 66),
+                                    size: 70,
                                   ),
-                                ),
-                                Text(
-                                  "Visibility",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color.fromARGB(255, 255, 255, 66),
+                                  Text(
+                                    currentWeather != null
+                                        ? currentWeather!.visibility % 1 == 0
+                                            ? "${currentWeather!.visibility.toInt()}km"
+                                            : "${currentWeather!.visibility.toStringAsFixed(1)}km"
+                                        : "",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color.fromARGB(255, 255, 255, 66),
+                                    ),
                                   ),
-                                )
-                              ],
+                                  Text(
+                                    "Visibility",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color.fromARGB(255, 255, 255, 66),
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
                           ],
                         ),
