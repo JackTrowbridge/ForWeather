@@ -22,7 +22,9 @@ class HomeWeather extends StatefulWidget {
 }
 
 class _HomeWeatherState extends State<HomeWeather> {
-  
+
+  final GlobalKey<ScaffoldState> _key = GlobalKey(); // Create a key
+
   Color primaryColor = ColourDictionary().getWeatherColour("");
   Duration colourTransitionDuration = const Duration(seconds: 2);
 
@@ -144,6 +146,7 @@ class _HomeWeatherState extends State<HomeWeather> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _key,
       resizeToAvoidBottomInset: false,
       body: AnimatedContainer(
         duration: colourTransitionDuration,
@@ -596,11 +599,125 @@ class _HomeWeatherState extends State<HomeWeather> {
                   ),
                 ),
               ) : const SizedBox.shrink(),
+
+              // Drawer Button
+              IconButton(
+                  onPressed: () {
+                    if (_key.currentState!.isDrawerOpen) {
+                      _key.currentState!.closeDrawer();
+                    } else {
+                      _key.currentState!.openDrawer();
+                    }
+                  },
+                  icon: Icon(
+                    Icons.menu,
+                    color: Colors.black,
+                    size: 30,
+                  )
+              ),
         
             ],
           ),
         ),
       ),
+      drawer: Drawer(
+        backgroundColor: Colors.black,
+        width: MediaQuery.of(context).size.width * 0.5,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(12),
+            bottomRight: Radius.circular(12),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              height: 100,
+              color: primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              alignment: Alignment.bottomLeft,
+              child: const Text(
+                "ForWeather",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            /// Use Expanded to fill the remaining space
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.settings, color: Colors.white),
+                    title: const Text(
+                      "Settings",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      // Handle settings tap
+                    },
+                  ),
+                  const Spacer(), // Push the version to the bottom
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Version 1.0.0",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white54,
+                          ),
+                        ),
+                        Text(
+                          "© 2025 ForWeather",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white54,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              "Made with ❤️ by ",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white54,
+                              ),
+                            ),
+                            Text(
+                              "Jack Trowbridge",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white54,
+                              ),
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+
+
+
     );
   }
 }
