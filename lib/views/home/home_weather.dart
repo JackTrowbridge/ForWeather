@@ -1,8 +1,11 @@
 import 'dart:ui';
 
+import 'package:algoliasearch/algoliasearch.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
+import 'package:forweather/api/api_key.dart';
+import 'package:forweather/models/location.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/current_weather.dart';
@@ -17,7 +20,6 @@ class HomeWeather extends StatefulWidget {
 }
 
 class _HomeWeatherState extends State<HomeWeather> {
-
   CurrentWeather? currentWeather;
   String currentDate = "";
 
@@ -25,6 +27,8 @@ class _HomeWeatherState extends State<HomeWeather> {
   TextEditingController searchController = TextEditingController();
   FocusNode searchFocusNode = FocusNode();
   bool isSearchFocused = false;
+
+  List<Location> searchedLocations = [];
 
   @override
   void initState() {
@@ -45,8 +49,8 @@ class _HomeWeatherState extends State<HomeWeather> {
   void _fetchWeatherData() async {
     print("Fetching weather data...");
 
-    GetWeatherObject getWeatherObject = await WeatherAPI().getCurrentWeather(
-        "Portsmouth");
+    GetWeatherObject getWeatherObject =
+        await WeatherAPI().getCurrentWeather("Portsmouth");
 
     if (getWeatherObject.statusCode == 200) {
       setState(() {
@@ -64,15 +68,51 @@ class _HomeWeatherState extends State<HomeWeather> {
   }
 
   void _searchCity() {
-    EasyDebounce.debounce(
-        'searchCity',
-        Duration(milliseconds: 500),
-        () => _search(searchController.text)
-    );
+    EasyDebounce.debounce('searchCity', Duration(milliseconds: 500),
+        () => _search(searchController.text));
   }
 
-  void _search(String input){
+  void _search(String input) async {
+
     print("Searching for city: $input");
+    setState(() {
+      searchedLocations.clear();
+    });
+
+    final indexName = "dev_forweather";
+
+    final client = SearchClient(
+        appId: APIKey().getAlgoliaApplicationID(),
+        apiKey: APIKey().getAlgoliaAPIKey());
+
+    final search = await client.search(
+        searchMethodParams: SearchMethodParams(requests: [
+      SearchForHits(
+        indexName: indexName,
+        query: input,
+        hitsPerPage: 5,
+      )
+    ]));
+
+    final searchResults = search.toJson();
+    for (final hit in searchResults["results"][0]["hits"]) {
+
+      // TODO: Handle duplicates better using toSet
+      if (searchedLocations.any((location) =>
+          location.name == hit["city"] && location.country == hit["country"])) {
+        continue; // Skip duplicates
+      }
+
+      final location = Location(
+        name: hit["city"] ?? "Unknown",
+        country: hit["country"] ?? "Unknown",
+      );
+
+      setState(() {
+        searchedLocations.add(location);
+        print("Found location: ${location.name}, ${location.country}");
+      });
+    }
   }
 
   @override
@@ -205,9 +245,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                               ),
                               Text(
                                 currentWeather != null
-                                    ? "Now it feels like +${currentWeather!
-                                    .feelsLike}°, actually +${currentWeather!
-                                    .temperature}°."
+                                    ? "Now it feels like +${currentWeather!.feelsLike}°, actually +${currentWeather!.temperature}°."
                                     : "Loading weather data...",
                                 style: TextStyle(
                                   fontSize: 14,
@@ -239,8 +277,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                 ),
                                 Text(
                                   currentWeather != null
-                                      ? "${currentWeather!.windSpeed
-                                      .toInt()}km/h"
+                                      ? "${currentWeather!.windSpeed.toInt()}km/h"
                                       : "",
                                   style: TextStyle(
                                     fontSize: 20,
@@ -295,10 +332,8 @@ class _HomeWeatherState extends State<HomeWeather> {
                                 Text(
                                   currentWeather != null
                                       ? currentWeather!.visibility % 1 == 0
-                                      ? "${currentWeather!.visibility
-                                      .toInt()}km"
-                                      : "${currentWeather!.visibility
-                                      .toStringAsFixed(1)}km"
+                                          ? "${currentWeather!.visibility.toInt()}km"
+                                          : "${currentWeather!.visibility.toStringAsFixed(1)}km"
                                       : "",
                                   style: TextStyle(
                                     fontSize: 20,
@@ -363,54 +398,63 @@ class _HomeWeatherState extends State<HomeWeather> {
             ),
 
             // Search bar
-            showSearchBar ? Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-
-
-                Column(
-                  children: [
-                    const SizedBox(height: 90),
-
-                    GlassContainer(
-                        child: SizedBox(
-                          width: MediaQuery
-                              .of(context)
-                              .size
-                              .width * 0.5,
-                          height: 20,
-                          child: TextField(
-                            focusNode: searchFocusNode,
-                            controller: searchController,
-                            decoration: InputDecoration(
-                                filled: false,
-                                hintText: "Search for a city...",
-                                hintStyle: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                ),
-                                border: InputBorder.none,
-                                suffixIcon: isSearchFocused ? IconButton(
-                                  padding: EdgeInsets.zero,
-                                  onPressed: () {
-                                    searchController.clear();
-                                  },
-                                  icon: Icon(Icons.clear, color: Colors.black,
-                                      size: 20),
-                                ) : Icon(Icons.search, color: Colors.black,
-                                    size: 20)
+            showSearchBar
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Column(
+                        children: [
+                          const SizedBox(height: 90),
+                          GlassContainer(
+                            child: SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.5,
+                              height: 20,
+                              child: TextField(
+                                focusNode: searchFocusNode,
+                                controller: searchController,
+                                decoration: InputDecoration(
+                                    filled: false,
+                                    hintText: "Search for a city...",
+                                    hintStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                    ),
+                                    border: InputBorder.none,
+                                    suffixIcon: isSearchFocused
+                                        ? IconButton(
+                                            padding: EdgeInsets.zero,
+                                            onPressed: () {
+                                              setState(() {
+                                                searchController.clear();
+                                                searchedLocations.clear();
+                                              });
+                                            },
+                                            icon: Icon(Icons.clear,
+                                                color: Colors.black, size: 20),
+                                          )
+                                        : Icon(Icons.search,
+                                            color: Colors.black, size: 20)),
+                              ),
                             ),
                           ),
-                        ),
-                    ),
+                          const SizedBox(height: 10),
 
-                  ],
-                )
+                          for (final location in searchedLocations)
+                            Column(
+                              children: [
+                                SearchResult(
+                                  cityName: location.name,
+                                  countryName: location.country,
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
 
-              ],
-            )
+                        ],
+                      )
+                    ],
+                  )
                 : const SizedBox.shrink(),
-
           ],
         ),
       ),
@@ -451,28 +495,80 @@ class DayWeatherCard extends StatelessWidget {
 
 class GlassContainer extends StatelessWidget {
   final Widget child;
-  const GlassContainer({super.key, required this.child});
+  final width;
+
+  const GlassContainer({super.key, required this.child, this.width});
 
   @override
   Widget build(BuildContext context) {
-    return
-    ClipRRect(
+    if (width != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(25)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+          child: Container(
+            width: width,
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.all(Radius.circular(25)),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+            ),
+            child: child,
+          ),
+        ),
+      );
+    }
+    return ClipRRect(
       borderRadius: BorderRadius.all(Radius.circular(25)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
           decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Colors.grey.withValues(alpha: 0.2),
             borderRadius: BorderRadius.all(Radius.circular(25)),
             border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 1.5
-            ),
+                color: Colors.white.withValues(alpha: 0.2), width: 1.5),
           ),
           child: child,
         ),
       ),
+    );
+  }
+}
+
+class SearchResult extends StatelessWidget {
+  final String? cityName;
+  final String? countryName;
+  const SearchResult({super.key, required this.cityName, required this.countryName});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassContainer(
+        width: MediaQuery.of(context).size.width * 0.5,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              color: Colors.black,
+              size: 20,
+            ),
+            Flexible(
+              child: Text(
+                "$cityName, $countryName",
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        )
     );
   }
 }
