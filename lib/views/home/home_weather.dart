@@ -21,6 +21,8 @@ class HomeWeather extends StatefulWidget {
 }
 
 class _HomeWeatherState extends State<HomeWeather> {
+  
+  Color primaryColor = const Color.fromARGB(255, 250, 255, 86);
 
   CurrentWeather? currentWeather;
   String currentDate = "";
@@ -140,7 +142,7 @@ class _HomeWeatherState extends State<HomeWeather> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Color.fromARGB(255, 255, 255, 66),
+      backgroundColor: primaryColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -213,7 +215,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: Color.fromARGB(255, 255, 255, 66),
+                              color: primaryColor,
                             ),
                           ),
                         ),
@@ -312,7 +314,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                 children: [
                                   Icon(
                                     Icons.waves_outlined,
-                                    color: Color.fromARGB(255, 255, 255, 66),
+                                    color: primaryColor,
                                     size: 70,
                                   ),
                                   Text(
@@ -322,7 +324,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
-                                      color: Color.fromARGB(255, 255, 255, 66),
+                                      color: primaryColor,
                                     ),
                                   ),
                                   Text(
@@ -330,7 +332,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
-                                      color: Color.fromARGB(255, 255, 255, 66),
+                                      color: primaryColor,
                                     ),
                                   )
                                 ],
@@ -341,7 +343,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                 children: [
                                   Icon(
                                     Icons.water_drop_outlined,
-                                    color: Color.fromARGB(255, 255, 255, 66),
+                                    color: primaryColor,
                                     size: 70,
                                   ),
                                   Text(
@@ -351,7 +353,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
-                                      color: Color.fromARGB(255, 255, 255, 66),
+                                      color: primaryColor,
                                     ),
                                   ),
                                   Text(
@@ -359,7 +361,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
-                                      color: Color.fromARGB(255, 255, 255, 66),
+                                      color: primaryColor,
                                     ),
                                   )
                                 ],
@@ -370,7 +372,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                 children: [
                                   Icon(
                                     Icons.remove_red_eye,
-                                    color: Color.fromARGB(255, 255, 255, 66),
+                                    color: primaryColor,
                                     size: 70,
                                   ),
                                   Text(
@@ -382,7 +384,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
-                                      color: Color.fromARGB(255, 255, 255, 66),
+                                      color: primaryColor,
                                     ),
                                   ),
                                   Text(
@@ -390,7 +392,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
-                                      color: Color.fromARGB(255, 255, 255, 66),
+                                      color: primaryColor,
                                     ),
                                   )
                                 ],
