@@ -5,8 +5,9 @@ class GlassContainer extends StatelessWidget {
   final Widget child;
   final width;
   final bool isSelected;
+  final Color selectedColor;
 
-  const GlassContainer({super.key, required this.child, this.width, this.isSelected = false});
+  const GlassContainer({super.key, required this.child, this.width, this.isSelected = false, this.selectedColor = Colors.black});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +23,7 @@ class GlassContainer extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(12)),
             border: isSelected
                 ? Border.all(
-                    color: Colors.black, width: 2.5)
+                    color: selectedColor, width: 2.5)
                 :
             Border.all(
                 color: Colors.white.withValues(alpha: 0.2), width: 1.5),

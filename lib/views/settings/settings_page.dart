@@ -44,39 +44,73 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             const SizedBox(height: 20),
 
-                            Row(
-                              children: [
-
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      settings.setTemperatureUnit(true);
-                                    });
-                                  },
-                                  child: GlassContainer(
-                                      isSelected: settings.isCelsius,
-                                      child: Text(
-                                        "Celsius",
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.black,
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  Text(
+                                      "Select your preferred temperature unit",
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: widget.currentColour,
                                       )
                                   ),
-                                ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
 
-                                const SizedBox(width: 10),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      settings.setTemperatureUnit(false);
-                                    });
-                                  },
-                                  child: GlassContainer(
-                                      isSelected: !settings.isCelsius,
-                                      child: Text(
-                                        "Fahrenheit",
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            settings.setTemperatureUnit(true);
+                                          });
+                                        },
+                                        child: GlassContainer(
+                                            isSelected: settings.isCelsius,
+                                            selectedColor: widget.currentColour,
+                                            child: Text(
+                                              "Celsius",
+                                              style: TextStyle(
+                                                color: widget.currentColour,
+                                              )
+                                            )
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 10),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            settings.setTemperatureUnit(false);
+                                          });
+                                        },
+                                        child: GlassContainer(
+                                            isSelected: !settings.isCelsius,
+                                            selectedColor: widget.currentColour,
+                                            child: Text(
+                                              "Fahrenheit",
+                                                style: TextStyle(
+                                                  color: widget.currentColour,
+                                                )
+                                            )
+                                        ),
+                                      )
+
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text("Your current selection is: " + (settings.isCelsius ? "Celsius" : "Fahrenheit"),
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: widget.currentColour,
                                       )
                                   ),
-                                )
-
-                              ],
+                                ],
+                              ),
                             )
 
                           ],
