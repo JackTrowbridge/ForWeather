@@ -1,4 +1,4 @@
-import 'package:forweather/api/api_key.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:g_json/g_json.dart';
 
@@ -9,7 +9,8 @@ class WeatherAPI {
 
   Future<GetWeatherObject> getCurrentWeather(String city, String country, String countryCode) async {
 
-    final String apiKey = APIKey().getOpenWeatherAPIKey();
+
+    final String apiKey = dotenv.env['OPEN_WEATHER_API_KEY'] ?? "";
 
     Map<String, String> headers = {
       "Content-Type": "application/json",

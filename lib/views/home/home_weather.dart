@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:algoliasearch/algoliasearch.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
-import 'package:forweather/api/api_key.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:forweather/dictionaries/colour_dictionary.dart';
 import 'package:forweather/models/current_weather.dart';
 import 'package:forweather/models/get_weather_object.dart';
@@ -14,6 +14,7 @@ import 'package:forweather/utils/weather_api.dart';
 import 'package:forweather/utils/weather_converter.dart';
 import 'package:forweather/views/settings/settings_page.dart';
 import 'package:forweather/views/widgets/glass_container.dart';
+import 'package:forweather/views/widgets/search.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
@@ -178,11 +179,11 @@ class _HomeWeatherState extends State<HomeWeather> {
       searchedLocations.clear();
     });
 
-    final indexName = "dev_forweather";
+    final indexName = dotenv.env['ALGOLIA_INDEX_NAME'] ?? "";
 
     final client = SearchClient(
-        appId: APIKey().getAlgoliaApplicationID(),
-        apiKey: APIKey().getAlgoliaAPIKey());
+        appId: dotenv.env['ALGOLIA_APP_ID'] ?? "",
+        apiKey: dotenv.env['ALGOLIA_API_KEY'] ?? "");
 
     final search = await client.search(
         searchMethodParams: SearchMethodParams(requests: [
@@ -563,7 +564,7 @@ class _HomeWeatherState extends State<HomeWeather> {
                               ),
                 
                               /*
-                
+
                           const SizedBox(height: 12),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -728,6 +729,8 @@ class _HomeWeatherState extends State<HomeWeather> {
               ),
             ),
           ),
+
+          // Drawer
           drawer: Drawer(
             backgroundColor: Colors.black,
             width: MediaQuery.of(context).size.width * 0.5,
@@ -829,15 +832,12 @@ class _HomeWeatherState extends State<HomeWeather> {
             ),
           ),
 
-
-
         );
-
       }
     );
-
   }
 }
+
 
 class DayWeatherCard extends StatelessWidget {
   const DayWeatherCard({super.key});
@@ -871,51 +871,3 @@ class DayWeatherCard extends StatelessWidget {
 }
 
 
-class SearchResult extends StatelessWidget {
-  final String? cityName;
-  final String? countryName;
-  final String? countryCode;
-  const SearchResult({super.key, required this.cityName, required this.countryName, required this.countryCode});
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassContainer(
-        width: MediaQuery.of(context).size.width * 0.6,
-        child: Row(
-          children: [
-            Icon(
-              Icons.location_on_outlined,
-              color: Colors.black,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "$cityName",
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Text(
-                    "$countryName",
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        )
-    );
-  }
-}
