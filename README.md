@@ -1,16 +1,36 @@
-# forweather
+# ForWeather
+A simple weather app which shows your place's temperature, humidity, visibility, and wind speed.
 
-A new Flutter project.
+The app includes changing your preferred temperature unit to celsius or fahrenheit, and the background colour changes based on the weather type.
 
-## Getting Started
+This app utilizes APIs such as OpenWeatherMap("https://openweathermap.org/") and Algolia("https://www.algolia.com/"). Algolia is used for the search feature to search cities.
 
-This project is a starting point for a Flutter application.
+# First Run
 
-A few resources to get you started if this is your first Flutter project:
+Clone the repository, either downloading it as a zip or clone it via the GitHub CLI.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Then install the dependencies.
+```
+flutter pub get
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### API Keys
+To ensure security, I have not added the API keys to this repo. Instead you'll have to make your own.
+
+I've added a `.envEXAMPLE` file which you'll find in the project's root structure. Simply duplicate the file and rename it to `.env`
+```
+root:
+  - .envEXAMPLE (Duplicate this and/or rename it to .env)
+```
+
+### Run the app
+After successfully installing the dependencies, and setting up your API keys. You can now run the project in debug mode using the following command.
+```
+flutter run --debug
+```
+Alternatively, if you're using Android Studio then you can just press play with your device connected and it should run everything for you.
+
+Your app should now be running in the emulator, or on a phone if you have it connected.
+
+# Need help?
+If you encounter any issues or have questions, feel free to contact me through my email `jjt2004@icloud.com`, or create an issue on this Github page. Thanks!
